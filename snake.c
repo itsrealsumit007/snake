@@ -8,7 +8,7 @@
 const int width = 800;
 const int height = 600;
 const int snake_block = 10;
-const int snake_speed = 15;
+const int base_snake_speed = 15;
 
 typedef struct {
     int x, y;
@@ -33,6 +33,13 @@ bool checkCollision(SnakeSegment* snake, int length) {
 
 bool checkFoodCollision(SnakeSegment* snake, int food_x, int food_y) {
     if (snake[0].x == food_x && snake[0].y == food_y) {
+        return true;
+    }
+    return false;
+}
+
+bool checkBoundaryCollision(SnakeSegment* snake) {
+    if (snake[0].x < 0 || snake[0].x >= width || snake[0].y < 0 || snake[0].y >= height) {
         return true;
     }
     return false;
@@ -65,6 +72,7 @@ int main(int argc, char* argv[]) {
     srand(time(NULL));
 
     bool running = true;
+    bool paused = false;
     SDL_Event event;
 
     int x1 = width / 2;
@@ -76,7 +84,8 @@ int main(int argc, char* argv[]) {
     generateFood(&food_x, &food_y);
 
     Uint32 start_time;
-    int frame_delay = 1000 / snake_speed;
+    int frame_delay = 1000 / base_snake_speed;
+    int snake_speed = base_snake_speed;
 
     SnakeSegment snake[100];
     int snake_length = 1;
@@ -92,63 +101,71 @@ int main(int argc, char* argv[]) {
             if (event.type == SDL_QUIT) {
                 running = false;
             } else if (event.type == SDL_KEYDOWN) {
-                switch (event.key.keysym.sym) {
-                    case SDLK_LEFT:
-                        x1_change = -snake_block;
-                        y1_change = 0;
-                        break;
-                    case SDLK_RIGHT:
-                        x1_change = snake_block;
-                        y1_change = 0;
-                        break;
-                    case SDLK_UP:
-                        x1_change = 0;
-                        y1_change = -snake_block;
-                        break;
-                    case SDLK_DOWN:
-                        x1_change = 0;
-                        y1_change = snake_block;
-                        break;
+                if (event.key.keysym.sym == SDLK_p) {
+                    paused = !paused;
+                }
+                if (!paused) {
+                    switch (event.key.keysym.sym) {
+                        case SDLK_LEFT:
+                            x1_change = -snake_block;
+                            y1_change = 0;
+                            break;
+                        case SDLK_RIGHT:
+                            x1_change = snake_block;
+                            y1_change = 0;
+                            break;
+                        case SDLK_UP:
+                            x1_change = 0;
+                            y1_change = -snake_block;
+                            break;
+                        case SDLK_DOWN:
+                            x1_change = 0;
+                            y1_change = snake_block;
+                            break;
+                    }
                 }
             }
         }
 
-        x1 += x1_change;
-        y1 += y1_change;
+        if (!paused) {
+            x1 += x1_change;
+            y1 += y1_change;
 
-        for (int i = snake_length - 1; i > 0; i--) {
-            snake[i] = snake[i - 1];
-        }
-        snake[0].x = x1;
-        snake[0].y = y1;
+            for (int i = snake_length - 1; i > 0; i--) {
+                snake[i] = snake[i - 1];
+            }
+            snake[0].x = x1;
+            snake[0].y = y1;
 
-        if (checkCollision(snake, snake_length)) {
-            running = false;
-        }
+            if (checkCollision(snake, snake_length) || checkBoundaryCollision(snake)) {
+                running = false;
+            }
 
-        if (checkFoodCollision(snake, food_x, food_y)) {
-            snake_length++;
-            score++;
-            generateFood(&food_x, &food_y);
-        }
+            if (checkFoodCollision(snake, food_x, food_y)) {
+                snake_length++;
+                score++;
+                snake_speed = base_snake_speed + score / 5; // Increase speed every 5 points
+                generateFood(&food_x, &food_y);
+            }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_Rect food_rect = {food_x, food_y, snake_block, snake_block};
-        SDL_RenderFillRect(renderer, &food_rect);
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            SDL_Rect food_rect = {food_x, food_y, snake_block, snake_block};
+            SDL_RenderFillRect(renderer, &food_rect);
 
-        drawSnake(renderer, snake, snake_length);
+            drawSnake(renderer, snake, snake_length);
 
-        char score_text[50];
-        sprintf(score_text, "Score: %d", score);
-        renderText(renderer, font, score_text, 10, 10);
+            char score_text[50];
+            sprintf(score_text, "Score: %d", score);
+            renderText(renderer, font, score_text, 10, 10);
 
-        SDL_RenderPresent(renderer);
+            SDL_RenderPresent(renderer);
 
-        if (1000 / snake_speed > SDL_GetTicks() - start_time) {
-            SDL_Delay(frame_delay - (SDL_GetTicks() - start_time));
+            if (1000 / snake_speed > SDL_GetTicks() - start_time) {
+                SDL_Delay(frame_delay - (SDL_GetTicks() - start_time));
+            }
         }
     }
 
