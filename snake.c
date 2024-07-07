@@ -1,10 +1,32 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 const int width = 800;
 const int height = 600;
 const int snake_block = 10;
 const int snake_speed = 15;
+
+typedef struct {
+    int x, y;
+} SnakeSegment;
+
+void drawSnake(SDL_Renderer* renderer, SnakeSegment* snake, int length) {
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+    for (int i = 0; i < length; i++) {
+        SDL_Rect snake_rect = {snake[i].x, snake[i].y, snake_block, snake_block};
+        SDL_RenderFillRect(renderer, &snake_rect);
+    }
+}
+
+bool checkCollision(SnakeSegment* snake, int length) {
+    for (int i = 1; i < length; i++) {
+        if (snake[0].x == snake[i].x && snake[0].y == snake[i].y) {
+            return true;
+        }
+    }
+    return false;
+}
 
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
@@ -21,6 +43,11 @@ int main(int argc, char* argv[]) {
 
     Uint32 start_time;
     int frame_delay = 1000 / snake_speed;
+
+    SnakeSegment snake[100];
+    int snake_length = 1;
+    snake[0].x = x1;
+    snake[0].y = y1;
 
     while (running) {
         start_time = SDL_GetTicks();
@@ -53,12 +80,20 @@ int main(int argc, char* argv[]) {
         x1 += x1_change;
         y1 += y1_change;
 
+        for (int i = snake_length - 1; i > 0; i--) {
+            snake[i] = snake[i - 1];
+        }
+        snake[0].x = x1;
+        snake[0].y = y1;
+
+        if (checkCollision(snake, snake_length)) {
+            running = false;
+        }
+
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        SDL_Rect snake_rect = {x1, y1, snake_block, snake_block};
-        SDL_RenderFillRect(renderer, &snake_rect);
+        drawSnake(renderer, snake, snake_length);
 
         SDL_RenderPresent(renderer);
 
