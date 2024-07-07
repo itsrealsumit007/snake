@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 const int width = 800;
 const int height = 600;
@@ -28,10 +29,24 @@ bool checkCollision(SnakeSegment* snake, int length) {
     return false;
 }
 
+bool checkFoodCollision(SnakeSegment* snake, int food_x, int food_y) {
+    if (snake[0].x == food_x && snake[0].y == food_y) {
+        return true;
+    }
+    return false;
+}
+
+void generateFood(int* food_x, int* food_y) {
+    *food_x = (rand() % (width / snake_block)) * snake_block;
+    *food_y = (rand() % (height / snake_block)) * snake_block;
+}
+
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+    srand(time(NULL));
 
     bool running = true;
     SDL_Event event;
@@ -40,6 +55,9 @@ int main(int argc, char* argv[]) {
     int y1 = height / 2;
     int x1_change = 0;
     int y1_change = 0;
+
+    int food_x, food_y;
+    generateFood(&food_x, &food_y);
 
     Uint32 start_time;
     int frame_delay = 1000 / snake_speed;
@@ -90,8 +108,17 @@ int main(int argc, char* argv[]) {
             running = false;
         }
 
+        if (checkFoodCollision(snake, food_x, food_y)) {
+            snake_length++;
+            generateFood(&food_x, &food_y);
+        }
+
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_Rect food_rect = {food_x, food_y, snake_block, snake_block};
+        SDL_RenderFillRect(renderer, &food_rect);
 
         drawSnake(renderer, snake, snake_length);
 
