@@ -1,7 +1,9 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdio.h>
 
 const int width = 800;
 const int height = 600;
@@ -41,10 +43,24 @@ void generateFood(int* food_x, int* food_y) {
     *food_y = (rand() % (height / snake_block)) * snake_block;
 }
 
+void renderText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y) {
+    SDL_Color white = {255, 255, 255, 255};
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text, white);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_Rect dstrect = {x, y, surface->w, surface->h};
+    SDL_RenderCopy(renderer, texture, NULL, &dstrect);
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(surface);
+}
+
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
+    TTF_Init();
     SDL_Window* window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    TTF_Font* font = TTF_OpenFont("arial.ttf", 24);
 
     srand(time(NULL));
 
@@ -66,6 +82,8 @@ int main(int argc, char* argv[]) {
     int snake_length = 1;
     snake[0].x = x1;
     snake[0].y = y1;
+
+    int score = 0;
 
     while (running) {
         start_time = SDL_GetTicks();
@@ -110,6 +128,7 @@ int main(int argc, char* argv[]) {
 
         if (checkFoodCollision(snake, food_x, food_y)) {
             snake_length++;
+            score++;
             generateFood(&food_x, &food_y);
         }
 
@@ -122,6 +141,10 @@ int main(int argc, char* argv[]) {
 
         drawSnake(renderer, snake, snake_length);
 
+        char score_text[50];
+        sprintf(score_text, "Score: %d", score);
+        renderText(renderer, font, score_text, 10, 10);
+
         SDL_RenderPresent(renderer);
 
         if (1000 / snake_speed > SDL_GetTicks() - start_time) {
@@ -129,8 +152,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    char game_over_text[50];
+    sprintf(game_over_text, "Game Over! Final Score: %d", score);
+    renderText(renderer, font, game_over_text, width / 2 - 100, height / 2 - 20);
+
+    SDL_RenderPresent(renderer);
+    SDL_Delay(3000);
+
+    TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    TTF_Quit();
     SDL_Quit();
 
     return 0;
