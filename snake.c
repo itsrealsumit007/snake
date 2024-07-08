@@ -62,9 +62,44 @@ void renderText(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x,
     SDL_FreeSurface(surface);
 }
 
+void updateScoreboard(int score) {
+    FILE* scoreboard_file = fopen("scoreboard.txt", "a");
+    if (scoreboard_file != NULL) {
+        fprintf(scoreboard_file, "%d\n", score);
+        fclose(scoreboard_file);
+    }
+}
+
+void displayScoreboard(SDL_Renderer* renderer, TTF_Font* font) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    renderText(renderer, font, "High Scores:", width / 2 - 50, 50);
+
+    FILE* scoreboard_file = fopen("scoreboard.txt", "r");
+    if (scoreboard_file != NULL) {
+        char line[256];
+        int y = 100;
+        while (fgets(line, sizeof(line), scoreboard_file)) {
+            int score;
+            sscanf(line, "%d", &score);
+            char score_text[50];
+            sprintf(score_text, "%d", score);
+            renderText(renderer, font, score_text, width / 2 - 20, y);
+            y += 30;
+        }
+        fclose(scoreboard_file);
+    }
+
+    SDL_RenderPresent(renderer);
+    SDL_Delay(5000); // Display scoreboard for 5 seconds
+}
+
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
+
     SDL_Window* window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     TTF_Font* font = TTF_OpenFont("arial.ttf", 24);
@@ -138,6 +173,7 @@ int main(int argc, char* argv[]) {
             snake[0].y = y1;
 
             if (checkCollision(snake, snake_length) || checkBoundaryCollision(snake)) {
+                updateScoreboard(score);
                 running = false;
             }
 
@@ -169,15 +205,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
-    char game_over_text[50];
-    sprintf(game_over_text, "Game Over! Final Score: %d", score);
-    renderText(renderer, font, game_over_text, width / 2 - 100, height / 2 - 20);
-
-    SDL_RenderPresent(renderer);
-    SDL_Delay(3000);
+    displayScoreboard(renderer, font);
 
     TTF_CloseFont(font);
     SDL_DestroyRenderer(renderer);
